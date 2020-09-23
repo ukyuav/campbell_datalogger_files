@@ -1,0 +1,212 @@
+'CR800 Series Datalogger
+'Example for use with the default message, CS message 1.
+'With CRC checking
+
+'SkyVUE Ceilometer connections
+' Blue Tx C1
+' White Rx C2
+' Green G
+' handshake lines shorted
+
+' SequentialMode
+Const SOH = 1 'Start of header
+Const STX = 2 'Start of Text
+Const ETX = 3 'End of Text
+Const EOT = 4 'End of Transmission
+
+
+Const MESSAGE_SIZE = 10426
+Const LINE_SIZE = 45
+Const FIELD_SIZE = 12
+Const PROFILE_LOC = 179
+Const NUM_PROFILE_GROUPS = 2048
+Const PROFILE_GROUP_SIZE = 5
+Const PROFILE_SIZE = NUM_PROFILE_GROUPS * PROFILE_GROUP_SIZE
+Const CHECKSUM_SIZE = 4
+
+' Message Type 006 (Profile, sky condition, mixing layer heights)
+' See Section 6.3.6 of the SkyVue Pro Manual
+Public OutStat As Boolean, LastFileName As String * 32
+
+'Allocate input string 
+Dim strInSkyVUE As String * MESSAGE_SIZE
+Dim i As Long
+Dim start_loc As Long
+Dim Num_Bytes As Long
+Dim strSkyVUE_Message_Status As String * 1
+Dim strSkyVUE_Alarm_Status As String * 1
+Dim lngCRCCalc As Long
+Dim lngCRCMessage As Long
+Dim DataOK As Boolean
+Dim SkyVUELines(5) As String * LINE_SIZE
+Dim CSLine2_Fields(7) As String * FIELD_SIZE
+Dim CSLine3_Fields(10) As String * FIELD_SIZE
+Dim CSLine4_Fields(10) As String * FIELD_SIZE
+Dim CSLine5_Fields(6) As String * FIELD_SIZE
+
+Dim SkyVUE_Backscatter_Profile As String * PROFILE_SIZE
+Dim Backscatter_Field_Strs(NUM_PROFILE_GROUPS) As String * PROFILE_GROUP_SIZE
+Public Backscatter_Fields(NUM_PROFILE_GROUPS) As Long
+Dim SkyVUE_Unit_of_Measure As String * 3
+Public strInformation As String * 100
+Public strAlarm As String * 100
+Public strError As String * 100
+
+Alias CSLine2_Fields(1)=SkyVUE_MessageAlarm_Status
+Alias CSLine2_Fields(2)=SkyVUE_Window_transmission
+Alias CSLine2_Fields(3)=SkyVUE_First_Height
+Alias CSLine2_Fields(4)=SkyVUE_Second_Height
+Alias CSLine2_Fields(5)=SkyVUE_Third_Height
+Alias CSLine2_Fields(6)=SkyVUE_Fourth_Height
+Alias CSLine2_Fields(7)=SkyVUE_Alarm_Flags
+
+Alias CSLine3_Fields(1)=Sky_condition_data_available
+Alias CSLine3_Fields(2)=Sky_condition_first_layer_height
+Alias CSLine3_Fields(3)=Sky_condition_second_layer_cloud_amount
+Alias CSLine3_Fields(4)=Sky_condition_second_layer_height
+Alias CSLine3_Fields(5)=Sky_condition_third_layer_cloud_amount
+Alias CSLine3_Fields(6)=Sky_condition_third_layer_height
+Alias CSLine3_Fields(7)=Sky_condition_fourth_layer_cloud_amount
+Alias CSLine3_Fields(8)=Sky_condition_fourth_layer_height
+Alias CSLine3_Fields(9)=Sky_condition_fifth_layer_cloud_amount
+Alias CSLine3_Fields(10)=Sky_condition_fifth_layer_height
+
+Alias CSLine4_Fields(1)=SkyVUE_Scale
+Alias CSLine4_Fields(2)=SkyVUE_Resolution
+Alias CSLine4_Fields(3)=SkyVUE_Profile_length
+Alias CSLine4_Fields(4)=SkyVUE_Laser_pulse_energy
+Alias CSLine4_Fields(5)=SkyVUE_Laser_temp
+Alias CSLine4_Fields(6)=SkyVUE_Tilt
+Alias CSLine4_Fields(7)=SkyVUE_Background_light
+Alias CSLine4_Fields(8)=SkyVUE_Pulse_quantity
+Alias CSLine4_Fields(9)=SkyVUE_Rate
+Alias CSLine4_Fields(10)=SkyVUE_Sum
+
+Alias CSLine5_Fields(1)=SkyVUE_MLH_1
+Alias CSLine5_Fields(2)=SkyVUE_MLH_1_Quality
+Alias CSLine5_Fields(3)=SkyVUE_MLH_2
+Alias CSLine5_Fields(4)=SkyVUE_MLH_2_Quality
+Alias CSLine5_Fields(5)=SkyVUE_MLH_3
+Alias CSLine5_Fields(6)=SkyVUE_MLH_3_Quality
+ 
+DataTable(Ceilometer,True,-1)
+  DataInterval(0,10,sec,10)
+  Sample (1, Num_Bytes, Long)
+  Sample (1,strSkyVUE_Message_Status,String)
+  Sample (1, strInformation, String)
+  Sample (1, strError, String)
+  Sample (1,SkyVUE_Window_transmission, String)
+  Sample (1,strAlarm,String)
+  Sample (1,SkyVUE_First_Height, String)
+  Sample (1,SkyVUE_Second_Height, String)
+  Sample (1,SkyVUE_Third_Height, String)
+  Sample (1,SkyVUE_Fourth_Height, String)
+  Sample (1,SkyVUE_Alarm_Flags, String)
+  Sample (1,Sky_condition_data_available, String)
+  Sample (1,Sky_condition_first_layer_height, String)
+  Sample (1,Sky_condition_second_layer_cloud_amount, String)
+  Sample (1,Sky_condition_second_layer_height, String)
+  Sample (1,Sky_condition_third_layer_cloud_amount, String)
+  Sample (1,Sky_condition_third_layer_height, String)
+  Sample (1,Sky_condition_fourth_layer_cloud_amount, String)
+  Sample (1,Sky_condition_fourth_layer_height, String)
+  Sample (1,Sky_condition_fifth_layer_cloud_amount, String)
+  Sample (1,SkyVUE_Scale, String)
+  Sample (1,SkyVUE_Resolution, String)
+  Sample (1,SkyVUE_Profile_length, String)
+  Sample (1,SkyVUE_Laser_pulse_energy, String)
+  Sample (1,SkyVUE_Laser_temp, String)
+  Sample (1,SkyVUE_Tilt, String)
+  Sample (1,SkyVUE_Background_light, String)
+  Sample (1,SkyVUE_Pulse_quantity, String)
+  Sample (1,SkyVUE_Rate, String)
+  Sample (1,SkyVUE_Sum, String)
+  Sample (1,SkyVUE_MLH_1, String)
+  Sample (1,SkyVUE_MLH_1_Quality, UINT4)
+  Sample (1,SkyVUE_MLH_2, String)
+  Sample (1,SkyVUE_MLH_2_Quality, UINT4)
+  Sample (1,SkyVUE_MLH_3, String)
+  Sample (1,SkyVUE_MLH_3_Quality, UINT4)
+  TableFile("CRD:SkyVUE_", 64, -1, 0, 1, Min, OutStat, LastFileName)
+EndTable
+
+DataTable(Backscatter,True,-1)
+  Sample(2048,Backscatter_Fields, Long)
+EndTable
+
+'Main Program
+BeginProg
+  ' open the port to the SkyVUE Ceilometer
+  'Assumes default serial settings, if not change baud rate & maybe format (2nd & 3rd parameters)
+  SerialOpen (ComC1,115200,3,0,MESSAGE_SIZE + CHECKSUM_SIZE + 1)
+  SkyVUE_Unit_of_Measure="ft"
+  Scan(10,Sec,1,0)
+    SerialInRecord (ComC1,strInSkyVUE,SOH,0,EOT,Num_Bytes,01)
+    If Num_Bytes > 0 Then
+      'Break up message on line feed separator
+      SplitStr (SkyVUELines,strInSkyVUE,CHR(10),5,5)
+      'Break up lines using space as separator
+      SplitStr (CSLine2_Fields, SkyVUELines(2)," ",7,5)
+      SplitStr (CSLine3_Fields, SkyVUELines(3)," ", 10, 5) 'Do I need to change the last argument to 7?
+      SplitStr (CSLine4_Fields, SkyVUELines(4)," ", 10, 5)
+      SplitStr (CSLine5_Fields, SkyVUELines(5)," ", 6, 5)
+      SkyVUE_Backscatter_Profile = Mid(strInSkyVUE, 180, PROFILE_SIZE)
+      For i = 1 To NUM_PROFILE_GROUPS
+        start_loc = ((i-1)*PROFILE_GROUP_SIZE) + 1
+        Backscatter_Field_Strs(i) =  Mid(SkyVUE_Backscatter_Profile, start_loc, PROFILE_GROUP_SIZE)  
+      ' It'd be nice to convert this to the decimal value, but CRBasic doesn't have a datatype large enough
+        Backscatter_Fields(i) = HexToDec(Backscatter_Field_Strs(i))
+        If Backscatter_Fields(i) > 524287 Then
+          Backscatter_Fields(i) = Backscatter_Fields(i) - 1048576
+        EndIf
+      Next i
+      
+      'First character is msg status
+      strSkyVUE_Message_Status=Left (SkyVUE_MessageAlarm_Status,1)
+      'Last character is alarm status
+      strSkyVUE_Alarm_Status=Right (SkyVUE_MessageAlarm_Status,1)
+      If strSkyVUE_Alarm_Status = "W" Then
+        strAlarm = "Warning"
+      ElseIf strSkyVUE_Alarm_Status = "A" Then
+        strAlarm = "Alarm"
+      Else
+        strAlarm = "OK"
+      EndIf
+      Select Case strSkyVUE_Message_Status
+      Case "0"
+        strInformation = "No significant backscatter"
+      Case "1"
+        strInformation = "One cloud base detected"
+      Case "2"
+        strInformation = "Two cloud bases detected"
+      Case "3"
+        strInformation = "Three cloud bases detected"
+      Case "4"
+        strInformation = "Four cloud bases detected"
+      Case "5"
+        strInformation = "Full obscuration determined but no cloud base detected"
+      Case "6"
+        strInformation = "Some obscuration detected but determined to be transparent"
+      Case "/"
+        strInformation = "Raw data input to algorithm missing or suspect"
+      Case Else
+        strInformation = "Status of message unknown."
+      EndSelect
+
+      'Check message to make sure it is complete & correct <<<<<<<<<<
+      lngCRCCalc = CheckSum (Left(strInSkyVUE,Num_Bytes-CHECKSUM_SIZE),18,0) XOR &HFFFF
+      lngCRCMessage = HexToDec (Right(strInSkyVUE,CHECKSUM_SIZE))
+      DataOK = (Num_Bytes = MESSAGE_SIZE) AND (lngCRCCalc = lngCRCMessage)
+      If NOT DataOK Then
+        strError = "Data error, messages may be incomplete!"
+      Else
+        strError = "Full message data recieved."
+      EndIf
+      'End message check <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Else
+      strError = "COMMS ERROR - No Message received"
+    EndIf
+    CallTable(Ceilometer)
+    CallTable(Backscatter)
+  NextScan
+EndProg
