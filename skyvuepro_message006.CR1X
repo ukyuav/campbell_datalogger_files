@@ -127,11 +127,12 @@ DataTable(Ceilometer,True,-1)
   Sample (1,SkyVUE_MLH_2_Quality, UINT4)
   Sample (1,SkyVUE_MLH_3, String)
   Sample (1,SkyVUE_MLH_3_Quality, UINT4)
-  TableFile("CRD:SkyVUE_", 64, -1, 0, 1, Min, OutStat, LastFileName)
+  TableFile("CRD:SkyVUE_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
 EndTable
 
 DataTable(Backscatter,True,-1)
   Sample(2048,Backscatter_Fields, Long)
+  TableFile("CRD:Backscatter_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
 EndTable
 
 'Main Program

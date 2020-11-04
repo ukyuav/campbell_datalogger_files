@@ -1,0 +1,180 @@
+'This data logger program measures KH20 Krypton Hygrometer and CSAT3B Sonic Anemometer
+'The station operator must enter the constant and the calibration value for the KH20.
+'Search for the text string "unique" to find the locations of these constants
+'and enter the appropriate values found from the calibration sheet of the KH20.
+
+'*** Unit Definitions ***
+'Units Description
+'ln_mV ln(mV) (natural log of the KH20 millivolts)
+'mV millivolts
+'rho_w g/m^3
+'*** Wiring ***
+'ANALOG INPUT
+'1H KH20 signal+ (white)
+'1L KH20 signal- (black)
+'gnd KH20 shield (clear)
+'gnd SoilVUEPro shield (clear)
+
+'DIGITAL INPUT
+'CSAT3B CPI into CR1000X CPI port (RJ45 connector)
+'C1 SoilVUEPro Data (white)
+
+'EXTERNAL POWER SUPPLY
+' data logger POWER IN 12 to supply source
+' data logger POWER IN G to supply ground
+
+'12V KH20 power+ (red)
+'12V CSAT3B power+ (red)
+'12V SoilVUEPro power+ (brown)
+
+'G KH20 power- (black)
+'G CSAT3B power- (black)
+'G SoilVUEPro power- (black)
+
+PipeLineMode
+
+'---------------------------------------------
+' Define Constants, Variables, and Aliases
+'---------------------------------------------
+Public OutStat As Boolean 
+Public LastFileName As String * 32
+' CSAT Constants
+Const CPI_ADDR = 30 'CPI Address of Device
+Public CSATVals(5)
+Public CSATMonitorVals(4)
+Alias CSATVals(1) = Ux
+Alias CSATVals(2) = Uy
+Alias CSATVals(3) = Uz
+Alias CSATVals(4) = SonTemp
+Alias CSATVals(5) = Diag
+Alias CSATMonitorVals(1) = BoardTemp
+Alias CSATMonitorVals(2) = BoardHumidity
+Alias CSATMonitorVals(3) = InclinePitch
+Alias CSATMonitorVals(4) = InclineRoll
+'***  KH20 Constants ***
+'Measurement Rate '20 Hz
+Const SCAN_INTERVAL = 50 '50 mSec
+'Output period
+Const OUTPUT_INTERVAL = 5 'Online flux data output interval in minutes.
+Const x = 1.204 'Unique path length of the KH20 [cm].
+Const kw = -0.150 'Unique water vapor absorption coefficient [m^3 / (g cm)].
+Const xkw = x*kw 'Path length times water vapor absorption coefficient [m^3 / g].
+'*** Variables ***
+Public panel_temp
+Public batt_volt
+Public kh(2)
+Public rho_w
+Alias kh(1) = kh_mV
+Alias kh (2) = ln_kh
+Units panel_temp = deg_C
+Units batt_volt = volts
+Units kh_mV = mV
+Units ln_kh = ln_mV
+Units rho_w = g/m^3
+
+' SoilVUE variables
+Public SoilVUE_05cm(4)
+Alias SoilVUE_05cm(1) = VWC_5cm
+Alias SoilVUE_05cm(2) = Perm_5cm
+Alias SoilVUE_05cm(3) = TC_5cm
+Alias SoilVUE_05cm(4) = EC_5cm
+Public SoilVUE_10cm(4)
+Alias SoilVUE_10cm(1) = VWC_10cm
+Alias SoilVUE_10cm(2) = Perm_10cm
+Alias SoilVUE_10cm(3) = TC_10cm
+Alias SoilVUE_10cm(4) = EC_10cm
+Public SoilVUE_20cm(4)
+Alias SoilVUE_20cm(1) = VWC_20cm
+Alias SoilVUE_20cm(2) = Perm_20cm
+Alias SoilVUE_20cm(3) = TC_20cm
+Alias SoilVUE_20cm(4) = EC_20cm
+Public SoilVUE_30cm(4)
+Alias SoilVUE_30cm(1) = VWC_30cm
+Alias SoilVUE_30cm(2) = Perm_30cm
+Alias SoilVUE_30cm(3) = TC_30cm
+Alias SoilVUE_30cm(4) = EC_30cm
+Public SoilVUE_40cm(4)
+Alias SoilVUE_40cm(1) = VWC_40cm
+Alias SoilVUE_40cm(2) = Perm_40cm
+Alias SoilVUE_40cm(3) = TC_40cm
+Alias SoilVUE_40cm(4) = EC_40cm
+Public SoilVUE_50cm(4)
+Alias SoilVUE_50cm(1) = VWC_50cm
+Alias SoilVUE_50cm(2) = Perm_50cm
+Alias SoilVUE_50cm(3) = TC_50cm
+Alias SoilVUE_50cm(4) = EC_50cm
+
+'---------------------------------------------
+' Define Data Tables
+'---------------------------------------------
+' Sonic Data
+DataTable (SonicData,1,-1)
+  Sample (5,CSATVals(1),IEEE4)
+  TableFile("CRD:SonicData_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+EndTable
+DataTable (SonicMonitorData,1,-1)
+  DataInterval (0,5,Sec,10)
+  Sample (4,CSATMonitorVals(1),IEEE4)
+EndTable
+'Processed data
+DataTable (Sonic_KH_5min_avg,True,-1)
+ DataInterval (0,OUTPUT_INTERVAL,Min,10)
+ Minimum (1,batt_volt,FP2,False,False)
+ Average (1,panel_temp,FP2,False)
+ Average (2,kh(1),IEEE4,False)
+ Average (5,CSATVals(1),IEEE4, False)
+ TableFile("CRD:Sonic_KH_5min_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+EndTable
+'KH20 Raw time-series data.
+DataTable (KH_ts_data,True,-1)
+ DataInterval (0,SCAN_INTERVAL,mSec,100)
+ Sample (1,kh_mV,IEEE4)
+ TableFile("CRD:KH_ts_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+EndTable
+'Table for SoilVUE data
+DataTable (SoilVUEdata,1,-1)
+  DataInterval (0,5,Min,10)
+  Average (4,SoilVUE_05cm(),IEEE4, False)
+  Average (4,SoilVUE_10cm(),IEEE4, False)
+  Average (4,SoilVUE_20cm(),IEEE4, False)
+  Average (4,SoilVUE_30cm(),IEEE4, False)
+  Average (4,SoilVUE_40cm(),IEEE4, False)
+  Average (4,SoilVUE_50cm(),IEEE4, False)
+  TableFile("CRD:SoilVUEData_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+EndTable
+
+'*** Program ***
+BeginProg
+ Scan (SCAN_INTERVAL,mSec,500,0)
+
+ 'data logger panel temperature.
+ PanelTemp (panel_temp,250)
+ 'Measure battery voltage.
+ Battery (batt_volt)
+ 'Measure KH20.
+ VoltDiff (kh_mV,1,mV5000,1,TRUE,200,250,1,0)
+ ln_kh = LOG(kh_mV)
+ rho_w = ln_kh/xkw
+ 
+ 'CSAT3B(Destination, Bus, Address, OperatingMode)
+ CSAT3B(CSATVals(),1,CPI_ADDR,0)
+ 
+ CallTable SonicData
+ CallTable Sonic_KH_5min_avg
+ CallTable KH_ts_data
+ NextScan
+ SlowSequence
+ Scan(5,sec,0,0) '5 second scan
+   ' CSAT3BMonitor(Destination, Bus, Address)
+   CSAT3BMonitor(CSATMonitorVals(),1,CPI_ADDR)
+   ' Queries to SoilVUE soil profiling probe
+   SDI12Recorder (SoilVUE_05cm(),C1,0,"M1!",1.0,0,-1)
+   SDI12Recorder (SoilVUE_10cm(),C1,0,"M2!",1.0,0,-1)
+   SDI12Recorder (SoilVUE_20cm(),C1,0,"M3!",1.0,0,-1)
+   SDI12Recorder (SoilVUE_30cm(),C1,0,"M4!",1.0,0,-1)
+   SDI12Recorder (SoilVUE_40cm(),C1,0,"M5!",1.0,0,-1)
+   SDI12Recorder (SoilVUE_50cm(),C1,0,"M6!",1.0,0,-1)
+   CallTable SoilVUEdata
+   CallTable SonicMonitorData
+  NextScan
+EndProg

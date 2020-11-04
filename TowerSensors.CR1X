@@ -1,0 +1,98 @@
+'CR1000X Series
+'Created by Short Cut (4.0)
+
+'Declare Variables and Units
+Public BattV
+Public PTemp_C
+Public AirTC
+Public RH
+Public TRHData(2)
+Public TRHData_2(2)
+Public BP_kPa
+Public NR_Wm2
+Public Soil_Ave_Temp_C
+Public HFP01_Wm2
+Public HFP02_Wm2
+Public CS65X(3)
+
+Alias TRHData(1)=AirTC_2
+Alias TRHData(2)=RH_2
+Alias TRHData_2(1)=AirTC_3
+Alias TRHData_2(2)=RH_3
+Alias CS65X(1)=VWC
+Alias CS65X(2)=EC
+Alias CS65X(3)=T
+
+Units BattV=Volts
+Units PTemp_C=Deg C
+Units AirTC=Deg C
+Units RH=%
+Units BP_kPa=kPa
+Units NR_Wm2=W/m^2
+Units Soil_Ave_Temp_C=Deg C
+Units HFP01_Wm2=Wm2
+Units HFP02_Wm2=Wm2
+Units AirTC_2=Deg C
+Units RH_2=%
+Units AirTC_3=Deg C
+Units RH_3=%
+Units VWC=m^3/m^3
+Units EC=dS/m
+Units T=Deg C
+
+Public OutStat As Boolean, LastFileName As String * 32
+
+'Define Data Tables
+DataTable(Table1_sample,True,-1)
+	DataInterval(0,1000,mSec,10)
+	Sample(1,AirTC,FP2)
+	Sample(1,RH,FP2)
+	Sample(1,AirTC_2,FP2)
+	Sample(1,RH_2,FP2)
+	Sample(1,AirTC_3,FP2)
+	Sample(1,RH_3,FP2)
+	Sample(1,BP_kPa,IEEE4)
+	Sample(1,NR_Wm2,FP2)
+	Sample(1,Soil_Ave_Temp_C,FP2)
+	Sample(1,HFP01_Wm2,FP2)
+	Sample(1,HFP02_Wm2,FP2)
+	Sample(1,VWC,FP2)
+	Sample(1,EC,FP2)
+	Sample(1,T,FP2)
+	TableFile("CRD:Tower_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+EndTable
+
+'Main Program
+BeginProg
+	'Main Scan
+	Scan(1000,mSec,2,0)
+		'Default CR1000X Datalogger Battery Voltage measurement 'BattV'
+		Battery(BattV)
+		'Default CR1000X Datalogger Wiring Panel Temperature measurement 'PTemp_C'
+		PanelTemp(PTemp_C,60)
+		'EE181 (constant power) Temperature & Relative Humidity Sensor measurements 'AirTC' and 'RH'
+		VoltSe(AirTC,1,mV1000,1,False,0,60,0.1,-40)
+		VoltSe(RH,1,mV1000,2,False,0,60,0.1,0)
+		If RH>100 AND RH<103 Then RH=100
+		'CS215 Temperature & Relative Humidity Sensor measurements 'AirTC_2' and 'RH_2'
+		SDI12Recorder(TRHData(),C1,"0","M!",1,0,-1)
+		'CS215 Temperature & Relative Humidity Sensor measurements 'AirTC_3' and 'RH_3'
+		SDI12Recorder(TRHData_2(),C3,"0","M!",1,0,-1)
+		'CS100 Barometric Pressure Sensor measurement 'BP_kPa'
+		PortSet(C2,1)
+		VoltSe(BP_kPa,1,mV5000,3,True,0,60,0.2,600)
+		BP_kPa=BP_kPa*0.1
+		'NR-LITE2 Net Radiometer (no wind speed correction) measurement 'NR_Wm2'
+		VoltDiff(NR_Wm2,1,mV200,3,True,0,60,72.46377,0)
+		'Type E Thermocouple measurements 'Soil_Ave_Temp_C'
+		TCDiff(Soil_Ave_Temp_C,1,mv200C,4,TypeE,PTemp_C,True,500,60,1,0)
+		'Generic Differential Voltage measurements 'HFP01_Wm2'
+		VoltDiff(HFP01_Wm2,1,AutoRange,5,True,200,60,16.5316581253,0)
+		'Generic Differential Voltage measurements 'HFP02_Wm2'
+		VoltDiff(HFP02_Wm2,1,AutoRange,6,True,200,60,16.2364020133,0)
+		'CS650/655 Water Content Reflectometer measurements 'VWC', 'EC', and 'T'
+		SDI12Recorder(CS65X(),C7,"0","M!",1,0,-1)
+		'Call Data Tables and Store Data
+		CallTable Table1_sample
+	NextScan
+EndProg
