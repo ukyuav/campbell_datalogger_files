@@ -100,7 +100,7 @@ BeginProg
 	Scan (1,sec,3,0)
 		If Flag(1)
 		
-			FTPResult=FTPClient ("demo.wftpserver.com","demo","demo","Table1_sample","testdata.txt",8,0,0,Min,-1008)
+			FTPResult=FTPClient (128.163.248.25,"skyvue","test2","Table1_sample","testdata.txt",8,0,0,Min,-1008)
       			Flag(1) = False
     		EndIf
   	NextScan
