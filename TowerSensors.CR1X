@@ -2,6 +2,8 @@
 'Created by Short Cut (4.0)
 
 'Declare Variables and Units
+Public FTPReport
+Public Flag(2) As Boolean
 Public BattV
 Public PTemp_C
 Public AirTC
@@ -39,6 +41,10 @@ Units RH_3=%
 Units VWC=m^3/m^3
 Units EC=dS/m
 Units T=Deg C
+
+Const IPAdrress="10.46.19.230:990"
+Const UserName="maintower"
+Const Password="test2"
 
 Public OutStat As Boolean, LastFileName As String * 32
 
@@ -100,7 +106,7 @@ BeginProg
 	Scan (1,sec,3,0)
 		If Flag(1)
 		
-			FTPResult=FTPClient (10.46.19.230:990,"skyvue","test2","Table1_sample","testdata.txt",18,0,0,Min,-1008)
+			FTPResult=FTPClient (IPAddress,UserName,Password,"Table1_sample","testdata.txt",18,0,0,Min,-1008)
       			Flag(1) = False
     		EndIf
   	NextScan
