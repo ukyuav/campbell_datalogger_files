@@ -95,11 +95,12 @@ BeginProg
 		'Call Data Tables and Store Data
 		CallTable Table1_sample
 	NextScan
-	
+
+'send data via FTP 
 	SlowSequence
 	Scan (1,sec,3,0)
 		If Flag(1)
-		
+			'test values for set-up
 			FTPResult=FTPClient (10.46.19.230:990,"skyvue","test2","Table1_sample","testdata.txt",18,0,0,Min,-1008)
       			Flag(1) = False
     		EndIf
