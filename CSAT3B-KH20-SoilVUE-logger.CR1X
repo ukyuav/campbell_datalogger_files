@@ -110,7 +110,7 @@ Alias SoilVUE_50cm(4) = EC_50cm
 ' Sonic Data
 DataTable (SonicData,1,-1)
   Sample (5,CSATVals(1),IEEE4)
-  TableFile("CRD:SonicData_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+  TableFile("CRD:SonicData_", 64, -1, 0, 1, Day, OutStat, LastFileName)
 EndTable
 DataTable (SonicMonitorData,1,-1)
   DataInterval (0,5,Sec,10)
@@ -123,13 +123,13 @@ DataTable (Sonic_KH_5min_avg,True,-1)
  Average (1,panel_temp,FP2,False)
  Average (2,kh(1),IEEE4,False)
  Average (5,CSATVals(1),IEEE4, False)
- TableFile("CRD:Sonic_KH_5min_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+ TableFile("CRD:Sonic_KH_5min_", 64, -1, 0, 1, Day, OutStat, LastFileName)
 EndTable
 'KH20 Raw time-series data.
 DataTable (KH_ts_data,True,-1)
  DataInterval (0,SCAN_INTERVAL,mSec,100)
  Sample (1,kh_mV,IEEE4)
- TableFile("CRD:KH_ts_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+ TableFile("CRD:KH_ts_", 64, -1, 0, 1, Day, OutStat, LastFileName)
 EndTable
 'Table for SoilVUE data
 DataTable (SoilVUEdata,1,-1)
@@ -140,7 +140,7 @@ DataTable (SoilVUEdata,1,-1)
   Average (4,SoilVUE_30cm(),IEEE4, False)
   Average (4,SoilVUE_40cm(),IEEE4, False)
   Average (4,SoilVUE_50cm(),IEEE4, False)
-  TableFile("CRD:SoilVUEData_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+  TableFile("CRD:SoilVUEData_", 64, -1, 0, 1, Day, OutStat, LastFileName)
 EndTable
 
 '*** Program ***
