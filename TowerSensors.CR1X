@@ -59,7 +59,7 @@ DataTable(Table1_sample,True,-1)
 	Sample(1,VWC,FP2)
 	Sample(1,EC,FP2)
 	Sample(1,T,FP2)
-	TableFile("CRD:Tower_", 64, -1, 0, 1, Hr, OutStat, LastFileName)
+	TableFile("CRD:Tower_", 64, -1, 0, 1, Day, OutStat, LastFileName)
 EndTable
 
 'Main Program
